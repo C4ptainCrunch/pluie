@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block css %}
+    #mapid {
+        height: 100vh;
+    }
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid" style="padding: 0;">
+        <!-- <div class="col-sm-3">
+        </div> -->
+        <div class="col-sm-12" style="padding: 0;">
+        <div id="mapid"></div>
+
+        </div>
+    </div>
+{% endblock content %}
+
+
+{% block js %}
+<script type="text/javascript">
+    var user_position = localStorage.getItem("user_position");
+    if(user_position === null) {
+        user_position = [50.845, 4.352];
+    } else {
+        user_position = JSON.parse(user_position);
+    }
+
+
+    var bounds = new L.LatLngBounds([54.8, 0], [49.5, 10]);
+    // var mymap = L.map('mapid').setView([50.845, 4.352], 14);
+    var mymap = L.map('mapid', {attributionControl: false, zoomControl: false }).setView(user_position, 10);
+    new L.Control.Zoom({ position: 'topright' }).addTo(mymap);
+
+    L.tileLayer('https://api.mapbox.com/styles/v1/c4ptaincrunch/citvh8ash004r2irqqjfryqvp/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1IjoiYzRwdGFpbmNydW5jaCIsImEiOiJUdWVRSENNIn0.qssi5TBLeBinBsXkZKiI6Q', {
+        maxZoom: 18,
+    }).addTo(mymap);
+
+    navigator.geolocation.getCurrentPosition(function(position) {
+        localStorage.setItem("user_position", JSON.stringify([position.coords.latitude, position.coords.longitude]));
+        mymap.panTo([position.coords.latitude, position.coords.longitude]);
+    });
+
+    polypoints = [
+        [54.8, 0],
+        [54.8, 10],
+        [49.5, 10],
+        [49.5, 0],
+        [54.8, 0]
+    ];
+    var polyline = L.polyline(polypoints, {color: '#444', weight: 2}).addTo(mymap);
+
+
+    preloadImage = function (path) {
+        return new Promise(function (resolve, reject) {
+            var image = new Image();
+            image.onload  = resolve;
+            image.onerror = resolve;
+            image.src = path;
+        });
+    };
+
+    fetch(new Request('http://127.0.0.1:5000/api/available_images.json'))
+    .then(function(response) {
+        return response.json();
+    }).then(function(list) {
+        promise = new Promise(function (resolve, reject) {resolve(); });
+        for (x of list) {
+            [_, time_str] = x;
+            url = "http://api.buienradar.nl/image/1.0/webmercatorradarnl/png/?t=" + time_str;
+            promise = promise.then(preloadImage(url));
+        }
+
+        promise.then(function() {
+            console.log("Image preload done.");
+        })
+
+        return list;
+    }).then(function(list) {
+        x = list[0]
+        [_, time_str] = x;
+        var imageUrl = "http://api.buienradar.nl/image/1.0/webmercatorradarnl/png/?t=" + time_str;
+        var overlay = L.imageOverlay(imageUrl, bounds, {opacity: 0.4}).addTo(mymap);
+        console.log(overlay);
+    })
+
+
+</script>
+{% endblock %}
+
+
