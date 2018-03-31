@@ -7,7 +7,8 @@ from io import BytesIO
 
 PREDICTION_HORIZON = 34  # we can download 34 images in the future (thus 34*5 min)
 NFRAMES = 4  # number of frames to interpolate
-
+WIDTH = 1058
+HEIGHT = 915
 
 def make_scale():
     scale_base = {
@@ -41,22 +42,22 @@ def make_scale():
 
 
 SCALE = make_scale()
+FULL_SCALE = np.array([[SCALE.T for x in range(WIDTH)] for y in range(HEIGHT)])
+MULTIPLIER = 256 / len(SCALE)
 
 
 def make_grayscale(bytes):
     fp = BytesIO(bytes)
-    rgb = np.array(Image.open(fp).convert("RGBA"))
-    gray = np.empty(rgb.shape[:2], dtype=np.uint8)
+    rgba = np.array(Image.open(fp).convert("RGBA"))
 
-    for y in range(gray.shape[0]):
-        for x in range(gray.shape[1]):
-            pix = rgb[y][x]
-            if pix[3] == 0:  # if the pixel is transparent, rain is 0
-                gray[y][x] = 0
-            else:
-                gray[y][x] = np.linalg.norm(SCALE - pix[:3], axis=1).argmin() * 5
+    # split RGBA to RGB and A
+    alpha = rgba[:, :, 3]
+    rgb = rgba[:, :, :3]
 
-    return Image.fromarray(gray)
+    gray = np.linalg.norm(FULL_SCALE - np.expand_dims(rgb, 3), axis=2).argmin(axis=2) * MULTIPLIER
+    gray[alpha == 0] = 0
+    
+    return Image.fromarray(gray.astype(np.uint8))
 
 
 def downlaod_picture(instant=None):
