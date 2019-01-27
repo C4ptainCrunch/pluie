@@ -11,6 +11,7 @@ import cv2
 PREDICTION_HORIZON = 34  # we can download 34 images in the future (thus 34*5 min)
 NFRAMES = 4  # number of frames to interpolate
 
+
 def make_scale():
     scale_base = {
         0: np.array([0xff, 0xff, 0xff]),

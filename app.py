@@ -33,5 +33,6 @@ def available_images():
 def img():
     return send_file("../red.png", mimetype='image/png')
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=1234)
